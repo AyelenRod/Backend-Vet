@@ -1,0 +1,190 @@
+plugins {
+    // Plugin de aplicación Java
+    id 'application'
+
+    // Plugin para crear JAR con dependencias (Fat JAR)
+    id 'com.github.johnrengelman.shadow' version '8.1.1'
+}
+
+// Información del proyecto
+group = 'com.vetfinder'
+version = '1.0.0'
+description = 'VetFinder API - Sistema de gestión veterinaria'
+
+// Configuración de Java
+java {
+    sourceCompatibility = JavaVersion.VERSION_11
+    targetCompatibility = JavaVersion.VERSION_11
+}
+
+// Configuración de la aplicación
+application {
+    // Clase principal de la aplicación
+    mainClass = 'com.vetfinder.Main'
+}
+
+// Configuración de repositorios
+repositories {
+    mavenCentral()
+}
+
+// Versiones de dependencias
+ext {
+    javalinVersion = '5.6.2'
+    mysqlVersion = '8.0.33'
+    hikariVersion = '5.0.1'
+    dotenvVersion = '3.0.0'
+    slf4jVersion = '2.0.7'
+    jacksonVersion = '2.15.2'
+}
+
+// Dependencias del proyecto
+dependencies {
+    // Javalin Framework
+    implementation "io.javalin:javalin:${javalinVersion}"
+
+    // MySQL Driver
+    implementation "mysql:mysql-connector-java:${mysqlVersion}"
+
+    // HikariCP para pool de conexiones
+    implementation "com.zaxxer:HikariCP:${hikariVersion}"
+
+    // DotEnv para variables de entorno
+    implementation "io.github.cdimascio:dotenv-java:${dotenvVersion}"
+
+    // Logging
+    implementation "org.slf4j:slf4j-simple:${slf4jVersion}"
+
+    // Jackson para JSON
+    implementation "com.fasterxml.jackson.core:jackson-databind:${jacksonVersion}"
+    implementation "com.fasterxml.jackson.datatype:jackson-datatype-jsr310:${jacksonVersion}"
+
+    // Dependencias de test (opcional)
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.9.3'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+// Configuración de compilación
+compileJava {
+    options.encoding = 'UTF-8'
+}
+
+// Configuración de JAR normal (sin dependencias)
+jar {
+    enabled = true
+    archiveClassifier = 'slim'
+
+    manifest {
+        attributes(
+                'Main-Class': application.mainClass.get(),
+                'Implementation-Title': project.name,
+                'Implementation-Version': project.version,
+                'Created-By': "Gradle ${gradle.gradleVersion}",
+                'Build-Jdk': System.getProperty('java.version')
+        )
+    }
+}
+
+// Configuración del Shadow JAR (JAR ejecutable con todas las dependencias)
+shadowJar {
+    // Nombre del archivo final
+    archiveBaseName = project.name
+    archiveVersion = project.version
+    archiveClassifier = 'executable'
+
+    // Configuración del manifest
+    manifest {
+        attributes(
+                'Main-Class': application.mainClass.get(),
+                'Implementation-Title': project.name,
+                'Implementation-Version': project.version,
+                'Created-By': "Gradle ${gradle.gradleVersion}",
+                'Build-Jdk': System.getProperty('java.version')
+        )
+    }
+
+    // Excluir archivos de firma que pueden causar problemas
+    exclude 'META-INF/*.SF'
+    exclude 'META-INF/*.DSA'
+    exclude 'META-INF/*.RSA'
+
+    // Configuración para manejar conflictos de archivos duplicados
+    mergeServiceFiles()
+
+    // Minimizar el JAR (opcional, descomenta si quieres reducir el tamaño)
+    // minimize()
+}
+
+// Configuración de tests
+test {
+    useJUnitPlatform()
+
+    // Configuración de logging para tests
+    testLogging {
+        events "passed", "skipped", "failed"
+        exceptionFormat "full"
+    }
+}
+
+// Tarea personalizada para limpiar archivos de construcción
+task cleanAll(type: Delete) {
+    delete 'build'
+    delete 'out'
+    delete '.gradle'
+}
+
+// Tarea para ejecutar la aplicación en desarrollo
+task runDev(type: JavaExec) {
+    group = 'application'
+    description = 'Ejecuta la aplicación en modo desarrollo'
+    classpath = sourceSets.main.runtimeClasspath
+    mainClass = application.mainClass.get()
+
+    // Variables de entorno para desarrollo
+    environment 'SERVER_PORT', '7000'
+
+    // Argumentos JVM para desarrollo
+    jvmArgs = [
+            '-Dfile.encoding=UTF-8',
+            '-Djava.awt.headless=true'
+    ]
+}
+
+// Tarea para crear distribución completa
+task createDistribution(type: Copy) {
+    group = 'distribution'
+    description = 'Crea una distribución completa de la aplicación'
+
+    dependsOn shadowJar
+
+    from(shadowJar.outputs.files) {
+        rename { "${project.name}-${project.version}.jar" }
+    }
+    from('.env.example') {
+        rename { '.env' }
+    }
+    from('README.md')
+    from('scripts/') {
+        into 'scripts'
+    }
+
+    into layout.buildDirectory.dir('distributions')
+}
+
+// Configuración del wrapper de Gradle
+wrapper {
+    gradleVersion = '8.2.1'
+    distributionType = Wrapper.DistributionType.BIN
+}
+
+// Configuración adicional para el build
+tasks.withType(JavaCompile) {
+    options.encoding = 'UTF-8'
+    options.compilerArgs += ['-Xlint:unchecked', '-Xlint:deprecation']
+}
+
+// Hacer que build dependa de shadowJar
+build.dependsOn shadowJar
+
+// Configurar qué tarea se ejecuta por defecto
+defaultTasks 'clean', 'build'
