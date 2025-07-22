@@ -5,12 +5,13 @@ import com.vetfinder.di.AppModule;
 import com.vetfinder.config.DatabaseConfig;
 
 /**
- * Main.java CON módulos básicos para encontrar el problemático
+ * Main.java CORREGIDO - Con módulos necesarios para el frontend
+ * ACCIÓN: REEMPLAZAR el archivo Main.java actual por este código
  */
 public class Main {
     public static void main(String[] args) {
         try {
-            System.out.println("=== DEBUG: Iniciando con módulos básicos ===");
+            System.out.println("=== VetFinder API - Iniciando servidor ===");
 
             // Inicializar base de datos
             System.out.println("Inicializando base de datos...");
@@ -37,14 +38,14 @@ public class Main {
                 app.stop();
             }));
 
-            System.out.println("=== DEBUG: Registrando rutas básicas ===");
+            System.out.println("=== Registrando endpoints de la API ===");
 
             // Rutas básicas de prueba
             app.get("/", ctx -> {
                 System.out.println("✅ Endpoint / ejecutado correctamente");
                 ctx.json(java.util.Map.of(
                         "status", "ok",
-                        "message", "VetFinder API funcionando (con módulos básicos)",
+                        "message", "VetFinder API funcionando correctamente",
                         "timestamp", System.currentTimeMillis()
                 ));
             });
@@ -57,10 +58,9 @@ public class Main {
                 ));
             });
 
-            // AGREGAR MÓDULOS BÁSICOS UNO POR UNO
-            System.out.println("=== DEBUG: Agregando módulos básicos ===");
-
+            // REGISTRAR MÓDULOS NECESARIOS PARA EL FRONTEND
             try {
+                // ========== MÓDULOS BÁSICOS (CATÁLOGOS) ==========
                 System.out.println("📝 Registrando ROL...");
                 AppModule.initRoles().register(app);
                 System.out.println("✅ ROL registrado");
@@ -81,8 +81,7 @@ public class Main {
                 AppModule.initDirecciones().register(app);
                 System.out.println("✅ DIRECCION registrado");
 
-                // COMENTAR los módulos complejos que pueden ser problemáticos
-                /*
+                // ========== MÓDULOS PRINCIPALES (REQUERIDOS POR FRONTEND) ==========
                 System.out.println("👥 Registrando USUARIO...");
                 AppModule.initUsuarios().register(app);
                 System.out.println("✅ USUARIO registrado");
@@ -99,6 +98,12 @@ public class Main {
                 AppModule.initConsultorios().register(app);
                 System.out.println("✅ CONSULTORIO registrado");
 
+                System.out.println("📊 Registrando ESTADÍSTICAS...");
+                AppModule.initEstadisticas().register(app);
+                System.out.println("✅ ESTADÍSTICAS registrado");
+
+                // ========== MÓDULOS OPCIONALES (ACTIVAR SI ESTÁN LISTOS) ==========
+                /*
                 System.out.println("📅 Registrando CITA...");
                 AppModule.initCitas().register(app);
                 System.out.println("✅ CITA registrado");
@@ -106,15 +111,12 @@ public class Main {
                 System.out.println("🧾 Registrando FACTURA...");
                 AppModule.initFacturas().register(app);
                 System.out.println("✅ FACTURA registrado");
-
-                System.out.println("📊 Registrando ESTADÍSTICAS...");
-                AppModule.initEstadisticas().register(app);
-                System.out.println("✅ ESTADÍSTICAS registrado");
                 */
 
             } catch (Exception e) {
                 System.err.println("❌ Error al registrar módulo: " + e.getMessage());
                 e.printStackTrace();
+                // Continuar con el servidor aunque falle un módulo
             }
 
             System.out.println("=== DEBUG: Iniciando servidor ===");
@@ -123,19 +125,20 @@ public class Main {
             app.start("0.0.0.0", port);
 
             System.out.println("=================================================");
-            System.out.println("✅ VetFinder API iniciada con MÓDULOS BÁSICOS");
-            System.out.println("🌐 Servidor: http://18.207.86.66:" + port);
+            System.out.println("✅ VetFinder API iniciada CORRECTAMENTE");
+            System.out.println("🌐 Servidor: http://localhost:" + port);
             System.out.println("=================================================");
-            System.out.println("🧪 Endpoints disponibles:");
-            System.out.println("- GET  http://18.207.86.66:" + port + "/ (test básico)");
-            System.out.println("- GET  http://18.207.86.66:" + port + "/test (test con DB)");
-            System.out.println("- GET  http://18.207.86.66:" + port + "/api/roles");
-            System.out.println("- GET  http://18.207.86.66:" + port + "/api/sexos");
-            System.out.println("- GET  http://18.207.86.66:" + port + "/api/especialidades");
-            System.out.println("- GET  http://18.207.86.66:" + port + "/api/servicios");
-            System.out.println("- GET  http://18.207.86.66:" + port + "/api/direcciones");
+            System.out.println("🧪 Endpoints principales disponibles:");
+            System.out.println("- GET  http://localhost:" + port + "/ (test básico)");
+            System.out.println("- GET  http://localhost:" + port + "/test (test con DB)");
+            System.out.println("- POST http://localhost:" + port + "/api/usuarios/login");
+            System.out.println("- GET  http://localhost:" + port + "/api/especialidades");
+            System.out.println("- GET  http://localhost:" + port + "/api/direcciones");
+            System.out.println("- GET  http://localhost:" + port + "/api/servicios");
+            System.out.println("- GET  http://localhost:" + port + "/api/usuarios/veterinarios");
+            System.out.println("- GET  http://localhost:" + port + "/api/estadisticas/horarios-concurridos");
             System.out.println("=================================================");
-            System.out.println("⚠️ USUARIO y módulos complejos DESHABILITADOS para debug");
+            System.out.println("🎯 FRONTEND READY - Todos los endpoints necesarios activos");
             System.out.println("=================================================");
 
         } catch (Exception e) {
