@@ -71,19 +71,63 @@ public class DatoVeterinarioController {
 
     /**
      * POST /datos-veterinarios - Crea un nuevo dato veterinario
+     * CON DEBUG PARA IDENTIFICAR PROBLEMA DE JSON
      */
     public void create(Context ctx) {
         try {
-            var datoVeterinario = ctx.bodyAsClass(DatoVeterinario.class);
-            int id = datoVeterinarioService.createDatoVeterinario(datoVeterinario);
-            datoVeterinario.setIdDatoVeterinario(id);
+            // ========== CÓDIGO DE DEBUG TEMPORAL ==========
+            System.out.println("=== DEBUG PETICIÓN POST /datos-veterinarios ===");
+            System.out.println("Method: " + ctx.method());
+            System.out.println("Path: " + ctx.path());
+            System.out.println("Content-Type header: " + ctx.header("Content-Type"));
+            System.out.println("Content-Length header: " + ctx.header("Content-Length"));
+            System.out.println("All headers: " + ctx.headerMap());
 
-            ctx.status(HttpStatus.CREATED)
-                    .json(ApiResponse.success("Dato veterinario creado correctamente", datoVeterinario));
+            // Verificar el contenido crudo del body
+            String bodyContent = ctx.body();
+            System.out.println("Body length: " + (bodyContent != null ? bodyContent.length() : "null"));
+            System.out.println("Body content: '" + bodyContent + "'");
+            System.out.println("Body isEmpty: " + (bodyContent == null || bodyContent.trim().isEmpty()));
+            System.out.println("Body bytes length: " + (ctx.bodyAsBytes() != null ? ctx.bodyAsBytes().length : "null"));
+
+            // Verificar si el body está vacío antes de intentar parsearlo
+            if (bodyContent == null || bodyContent.trim().isEmpty()) {
+                System.err.println("ERROR: Body de la petición está vacío!");
+                ctx.status(HttpStatus.BAD_REQUEST)
+                        .json(ApiResponse.error("Body de la petición está vacío. Se requiere JSON válido con los datos del veterinario."));
+                return;
+            }
+
+            // Intentar validar que sea JSON válido
+            try {
+                System.out.println("Intentando parsear JSON...");
+                var datoVeterinario = ctx.bodyAsClass(DatoVeterinario.class);
+                System.out.println("JSON parseado exitosamente!");
+                System.out.println("Objeto creado: " + datoVeterinario);
+
+                // Lógica normal de creación
+                int id = datoVeterinarioService.createDatoVeterinario(datoVeterinario);
+                datoVeterinario.setIdDatoVeterinario(id);
+
+                ctx.status(HttpStatus.CREATED)
+                        .json(ApiResponse.success("Dato veterinario creado correctamente", datoVeterinario));
+
+            } catch (Exception parseException) {
+                System.err.println("ERROR AL PARSEAR JSON:");
+                parseException.printStackTrace();
+                ctx.status(HttpStatus.BAD_REQUEST)
+                        .json(ApiResponse.error("Error al parsear JSON: " + parseException.getMessage()));
+                return;
+            }
+            // ========== FIN DEBUG ==========
+
         } catch (IllegalArgumentException e) {
+            System.err.println("Error de validación: " + e.getMessage());
             ctx.status(HttpStatus.BAD_REQUEST)
                     .json(ApiResponse.error(e.getMessage()));
         } catch (Exception e) {
+            System.err.println("Error general en create:");
+            e.printStackTrace();
             ctx.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .json(ApiResponse.error("Error al crear dato veterinario: " + e.getMessage()));
         }
@@ -91,9 +135,33 @@ public class DatoVeterinarioController {
 
     /**
      * PUT /datos-veterinarios/{id} - Actualiza un dato veterinario existente
+     * CON DEBUG PARA IDENTIFICAR PROBLEMA DE JSON
      */
     public void update(Context ctx) {
         try {
+            // ========== CÓDIGO DE DEBUG TEMPORAL ==========
+            System.out.println("=== DEBUG PETICIÓN PUT /datos-veterinarios/{id} ===");
+            System.out.println("Method: " + ctx.method());
+            System.out.println("Path: " + ctx.path());
+            System.out.println("Path param 'id': " + ctx.pathParam("id"));
+            System.out.println("Content-Type header: " + ctx.header("Content-Type"));
+            System.out.println("Content-Length header: " + ctx.header("Content-Length"));
+
+            // Verificar el contenido crudo del body
+            String bodyContent = ctx.body();
+            System.out.println("Body length: " + (bodyContent != null ? bodyContent.length() : "null"));
+            System.out.println("Body content: '" + bodyContent + "'");
+            System.out.println("Body isEmpty: " + (bodyContent == null || bodyContent.trim().isEmpty()));
+
+            // Verificar si el body está vacío antes de intentar parsearlo
+            if (bodyContent == null || bodyContent.trim().isEmpty()) {
+                System.err.println("ERROR: Body de la petición PUT está vacío!");
+                ctx.status(HttpStatus.BAD_REQUEST)
+                        .json(ApiResponse.error("Body de la petición está vacío. Se requiere JSON válido con los datos actualizados."));
+                return;
+            }
+            // ========== FIN DEBUG ==========
+
             int id = Integer.parseInt(ctx.pathParam("id"));
             var datoVeterinario = ctx.bodyAsClass(DatoVeterinario.class);
             datoVeterinario.setIdDatoVeterinario(id);
@@ -106,9 +174,12 @@ public class DatoVeterinarioController {
                         .json(ApiResponse.notFound("Dato veterinario"));
             }
         } catch (IllegalArgumentException e) {
+            System.err.println("Error de validación en update: " + e.getMessage());
             ctx.status(HttpStatus.BAD_REQUEST)
                     .json(ApiResponse.error(e.getMessage()));
         } catch (Exception e) {
+            System.err.println("Error general en update:");
+            e.printStackTrace();
             ctx.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .json(ApiResponse.error("Error al actualizar dato veterinario: " + e.getMessage()));
         }

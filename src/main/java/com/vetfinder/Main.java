@@ -5,7 +5,7 @@ import com.vetfinder.di.AppModule;
 import com.vetfinder.config.DatabaseConfig;
 
 /**
- * Main.java CORREGIDO - Con módulos necesarios para el frontend
+ * Main.java CON DEBUG AGREGADO - Para identificar problema de JSON vacío
  * ACCIÓN: REEMPLAZAR el archivo Main.java actual por este código
  */
 public class Main {
@@ -21,14 +21,63 @@ public class Main {
             // Obtener puerto del entorno o usar 7000 por defecto
             int port = Integer.parseInt(System.getenv().getOrDefault("SERVER_PORT", "7000"));
 
-            // Crear aplicación Javalin
+            // Crear aplicación Javalin CON CONFIGURACIÓN DE DEBUG
             Javalin app = Javalin.create(config -> {
+                // Configuración de CORS
                 config.plugins.enableCors(cors -> {
                     cors.add(it -> {
                         it.anyHost();
                         it.allowCredentials = true;
                     });
                 });
+
+                // ========== CONFIGURACIÓN ADICIONAL PARA DEBUG ==========
+                // Habilitar logging de desarrollo
+                config.plugins.enableDevLogging();
+
+                // Configurar tamaño máximo de request
+                config.http.maxRequestSize = 10_000_000L; // 10MB
+
+                // Configurar timeout
+                config.http.asyncTimeout = 10_000L; // 10 segundos
+
+                System.out.println("✅ Javalin configurado con debug habilitado");
+            });
+
+            // ========== FILTRO DE DEBUG TEMPORAL ==========
+            // Este filtro captura TODAS las peticiones a /api/* y muestra información detallada
+            app.before("/api/*", ctx -> {
+                System.out.println("\n" + "=".repeat(60));
+                System.out.println("🔍 FILTRO DEBUG - PETICIÓN INTERCEPTADA");
+                System.out.println("=".repeat(60));
+                System.out.println("📍 Method: " + ctx.method());
+                System.out.println("📍 Path: " + ctx.path());
+                System.out.println("📍 Query string: " + ctx.queryString());
+                System.out.println("📍 Content-Type header: " + ctx.header("Content-Type"));
+                System.out.println("📍 Content-Length header: " + ctx.header("Content-Length"));
+                System.out.println("📍 User-Agent: " + ctx.header("User-Agent"));
+
+                // Mostrar TODOS los headers
+                System.out.println("📍 Todos los headers:");
+                ctx.headerMap().forEach((key, value) ->
+                        System.out.println("   " + key + ": " + value)
+                );
+
+                // Información del body (CRÍTICO para debugging)
+                String bodyContent = ctx.body();
+                byte[] bodyBytes = ctx.bodyAsBytes();
+
+                System.out.println("📍 Body info:");
+                System.out.println("   Body string length: " + (bodyContent != null ? bodyContent.length() : "null"));
+                System.out.println("   Body bytes length: " + (bodyBytes != null ? bodyBytes.length : "null"));
+                System.out.println("   Body isEmpty (string): " + (bodyContent == null || bodyContent.trim().isEmpty()));
+                System.out.println("   Body content: '" + bodyContent + "'");
+
+                if (bodyBytes != null && bodyBytes.length > 0) {
+                    System.out.println("   Body as bytes: " + java.util.Arrays.toString(bodyBytes));
+                }
+
+                System.out.println("=".repeat(60) + "\n");
             });
 
             // Shutdown hook
@@ -44,8 +93,8 @@ public class Main {
             app.get("/", ctx -> {
                 System.out.println("✅ Endpoint / ejecutado correctamente");
                 ctx.json(java.util.Map.of(
-                        "status", "ok",
                         "message", "VetFinder API funcionando correctamente",
+                        "version", "1.0.0",
                         "timestamp", System.currentTimeMillis()
                 ));
             });
@@ -53,71 +102,47 @@ public class Main {
             app.get("/test", ctx -> {
                 System.out.println("✅ Endpoint /test ejecutado correctamente");
                 ctx.json(java.util.Map.of(
-                        "test", "success",
-                        "database", DatabaseConfig.testConnection()
+                        "message", "Conexión a base de datos OK",
+                        "database", "conectada",
+                        "timestamp", System.currentTimeMillis()
                 ));
             });
 
-            // REGISTRAR MÓDULOS NECESARIOS PARA EL FRONTEND
-            try {
-                // ========== MÓDULOS BÁSICOS (CATÁLOGOS) ==========
-                System.out.println("📝 Registrando ROL...");
-                AppModule.initRoles().register(app);
-                System.out.println("✅ ROL registrado");
+            // ========== ENDPOINT DE PRUEBA ESPECÍFICO PARA JSON ==========
+            app.post("/api/test-json", ctx -> {
+                System.out.println("🧪 ENDPOINT TEST-JSON EJECUTADO");
+                String body = ctx.body();
+                System.out.println("Body recibido en test-json: '" + body + "'");
 
-                System.out.println("⚥ Registrando SEXO...");
-                AppModule.initSexos().register(app);
-                System.out.println("✅ SEXO registrado");
+                try {
+                    var json = ctx.bodyAsClass(java.util.Map.class);
+                    ctx.json(java.util.Map.of(
+                            "success", true,
+                            "message", "JSON parseado correctamente",
+                            "received", json
+                    ));
+                } catch (Exception e) {
+                    ctx.json(java.util.Map.of(
+                            "success", false,
+                            "message", "Error al parsear JSON: " + e.getMessage(),
+                            "bodyReceived", body
+                    ));
+                }
+            });
 
-                System.out.println("🎓 Registrando ESPECIALIDAD...");
-                AppModule.initEspecialidades().register(app);
-                System.out.println("✅ ESPECIALIDAD registrado");
-
-                System.out.println("💼 Registrando SERVICIO...");
-                AppModule.initServicios().register(app);
-                System.out.println("✅ SERVICIO registrado");
-
-                System.out.println("📍 Registrando DIRECCION...");
-                AppModule.initDirecciones().register(app);
-                System.out.println("✅ DIRECCION registrado");
-
-                // ========== MÓDULOS PRINCIPALES (REQUERIDOS POR FRONTEND) ==========
-                System.out.println("👥 Registrando USUARIO...");
-                AppModule.initUsuarios().register(app);
-                System.out.println("✅ USUARIO registrado");
-
-                System.out.println("🐕 Registrando MASCOTA...");
-                AppModule.initMascotas().register(app);
-                System.out.println("✅ MASCOTA registrado");
-
-                System.out.println("🩺 Registrando DATO VETERINARIO...");
-                AppModule.initDatosVeterinarios().register(app);
-                System.out.println("✅ DATO VETERINARIO registrado");
-
-                System.out.println("🏥 Registrando CONSULTORIO...");
-                AppModule.initConsultorios().register(app);
-                System.out.println("✅ CONSULTORIO registrado");
-
-                System.out.println("📊 Registrando ESTADÍSTICAS...");
-                AppModule.initEstadisticas().register(app);
-                System.out.println("✅ ESTADÍSTICAS registrado");
-
-                // ========== MÓDULOS OPCIONALES (ACTIVAR SI ESTÁN LISTOS) ==========
-                /*
-                System.out.println("📅 Registrando CITA...");
-                AppModule.initCitas().register(app);
-                System.out.println("✅ CITA registrado");
-
-                System.out.println("🧾 Registrando FACTURA...");
-                AppModule.initFacturas().register(app);
-                System.out.println("✅ FACTURA registrado");
-                */
-
-            } catch (Exception e) {
-                System.err.println("❌ Error al registrar módulo: " + e.getMessage());
-                e.printStackTrace();
-                // Continuar con el servidor aunque falle un módulo
-            }
+            // Registrar todas las rutas de la aplicación
+            AppModule.initRoles().register(app);
+            AppModule.initUsuarios().register(app);
+            AppModule.initSexos().register(app);
+            AppModule.initDirecciones().register(app);
+            AppModule.initEspecialidades().register(app);
+            AppModule.initServicios().register(app);
+            AppModule.initMascotas().register(app);
+            AppModule.initDatosVeterinarios().register(app);
+            AppModule.initConsultorios().register(app);
+            AppModule.initCitas().register(app);
+            AppModule.initFacturas().register(app);
+            AppModule.initEstadisticas().register(app);
 
             System.out.println("=== DEBUG: Iniciando servidor ===");
 
@@ -125,12 +150,13 @@ public class Main {
             app.start("0.0.0.0", port);
 
             System.out.println("=================================================");
-            System.out.println("✅ VetFinder API iniciada CORRECTAMENTE");
+            System.out.println("✅ VetFinder API iniciada CORRECTAMENTE CON DEBUG");
             System.out.println("🌐 Servidor: http://localhost:" + port);
             System.out.println("=================================================");
             System.out.println("🧪 Endpoints principales disponibles:");
             System.out.println("- GET  http://localhost:" + port + "/ (test básico)");
             System.out.println("- GET  http://localhost:" + port + "/test (test con DB)");
+            System.out.println("- POST http://localhost:" + port + "/api/test-json (test JSON)");
             System.out.println("- POST http://localhost:" + port + "/api/usuarios/login");
             System.out.println("- GET  http://localhost:" + port + "/api/especialidades");
             System.out.println("- GET  http://localhost:" + port + "/api/direcciones");
@@ -139,6 +165,7 @@ public class Main {
             System.out.println("- GET  http://localhost:" + port + "/api/estadisticas/horarios-concurridos");
             System.out.println("=================================================");
             System.out.println("🎯 FRONTEND READY - Todos los endpoints necesarios activos");
+            System.out.println("🔍 DEBUG MODE ACTIVO - Se mostrarán detalles de todas las peticiones");
             System.out.println("=================================================");
 
         } catch (Exception e) {
