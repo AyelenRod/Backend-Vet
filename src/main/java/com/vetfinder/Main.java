@@ -32,20 +32,16 @@ public class Main {
                 });
 
                 // ========== CONFIGURACIÓN ADICIONAL PARA DEBUG ==========
-                // Habilitar logging de desarrollo
                 config.plugins.enableDevLogging();
 
-                // Configurar tamaño máximo de request
                 config.http.maxRequestSize = 10_000_000L; // 10MB
 
-                // Configurar timeout
                 config.http.asyncTimeout = 10_000L; // 10 segundos
 
                 System.out.println("✅ Javalin configurado con debug habilitado");
             });
 
             // ========== FILTRO DE DEBUG TEMPORAL ==========
-            // Este filtro captura TODAS las peticiones a /api/* y muestra información detallada
             app.before("/api/*", ctx -> {
                 System.out.println("\n" + "=".repeat(60));
                 System.out.println("🔍 FILTRO DEBUG - PETICIÓN INTERCEPTADA");
